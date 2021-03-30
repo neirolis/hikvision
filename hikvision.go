@@ -187,12 +187,20 @@ func (c *Client) ThermalJPEGWithData(channel string) (data ThermalData, err erro
 //
 
 type PTZrelativeData struct {
-	PosX int
-	PosY int
-	Zoom int
+	PosX uint8 `json:"positionX"` // <!--opt, xs:integer, 0-.. 255--->
+	PosY uint8 `json:"positionY"` // <!--opt, xs:integer, 0-.. 255--->
+	Zoom int   `json:"zoom"`      // <!--opt, xs:integer, -100-.. 100--->
 }
 
 func (data PTZrelativeData) XML() string {
+	if data.Zoom < -100 {
+		data.Zoom = -100
+	}
+
+	if data.Zoom > 100 {
+		data.Zoom = 100
+	}
+
 	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <PTZData version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
   <Relative>
@@ -228,12 +236,31 @@ func (c *Client) PTZrelative(channel string, data PTZrelativeData) error {
 }
 
 type PTZabsoluteData struct {
-	Elevation int `xml:"AbsoluteHigh>elevation"`    //<!--opt, xs:integer, -900..2700 -->
-	Azimuth   int `xml:"AbsoluteHigh>azimuth"`      //<!--opt, xs:integer, 0..3600 -->
-	Zoom      int `xml:"AbsoluteHigh>absoluteZoom"` //<!--opt, xs:integer, 0.. 1000--->
+	Elevation int `xml:"AbsoluteHigh>elevation" json:"elevation"` //<!--opt, xs:integer, -900..2700 -->
+	Azimuth   int `xml:"AbsoluteHigh>azimuth" json:"azimuth"`     //<!--opt, xs:integer, 0..3600 -->
+	Zoom      int `xml:"AbsoluteHigh>absoluteZoom" json:"zoom"`   //<!--opt, xs:integer, 0.. 1000--->
 }
 
 func (data PTZabsoluteData) XML() string {
+	if data.Elevation < -900 {
+		data.Elevation = -900
+	}
+	if data.Elevation > 2700 {
+		data.Elevation = 2700
+	}
+	if data.Azimuth < 0 {
+		data.Azimuth = 0
+	}
+	if data.Azimuth > 3600 {
+		data.Azimuth = 3600
+	}
+	if data.Zoom < 0 {
+		data.Zoom = 0
+	}
+	if data.Zoom > 1000 {
+		data.Zoom = 1000
+	}
+
 	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <PTZData version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
   <AbsoluteHigh>
