@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"math"
 	"mime/multipart"
-	"net/http/httputil"
 
 	"github.com/goware/urlx"
 	"github.com/op/go-logging"
@@ -220,14 +219,6 @@ func (c *Client) PTZrelative(channel string, data PTZrelativeData) error {
 		return err
 	}
 	defer resp.Body.Close()
-
-	dump, err := httputil.DumpResponse(resp, true)
-	if err != nil {
-		return err
-	}
-
-	log.Debug(string(dump))
-
 	if resp.StatusCode != 200 {
 		return errors.New(resp.Status)
 	}
@@ -280,14 +271,6 @@ func (c *Client) PTZabsolute(channel string, data PTZabsoluteData) error {
 		return err
 	}
 	defer resp.Body.Close()
-
-	dump, err := httputil.DumpResponse(resp, true)
-	if err != nil {
-		return err
-	}
-
-	log.Debug(string(dump))
-
 	if resp.StatusCode != 200 {
 		return errors.New(resp.Status)
 	}
