@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"math"
 	"mime/multipart"
+	"net/http/httputil"
 
 	"github.com/goware/urlx"
 	"github.com/op/go-logging"
@@ -177,6 +178,109 @@ func (c *Client) ThermalJPEGWithData(channel string) (data ThermalData, err erro
 	if data.VisiblePic, err = ioutil.ReadAll(visiblePart); err != nil {
 		return data, fmt.Errorf("failed to read data 'visiblePic', reason: %v", err)
 	}
+
+	return
+}
+
+//
+//
+//
+
+type PTZrelativeData struct {
+	PosX int
+	PosY int
+	Zoom int
+}
+
+func (data PTZrelativeData) XML() string {
+	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<PTZData version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
+  <Relative>
+    <positionX>%d</positionX>
+    <positionY>%d</positionY>
+    <relativeZoom>%d</relativeZoom>
+  </Relative>
+</PTZData>`, data.PosX, data.PosY, data.Zoom)
+}
+
+func (c *Client) PTZrelative(channel string, data PTZrelativeData) error {
+	log.Debug(data.XML())
+	r := dac.NewRequest(c.user, c.pass, "PUT", c.URL("/ISAPI/PTZCtrl/channels/"+channel+"/relative"), data.XML())
+
+	resp, err := r.Execute()
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	dump, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		return err
+	}
+
+	log.Debug(string(dump))
+
+	if resp.StatusCode != 200 {
+		return errors.New(resp.Status)
+	}
+
+	return nil
+}
+
+type PTZabsoluteData struct {
+	Elevation int `xml:"AbsoluteHigh>elevation"`    //<!--opt, xs:integer, -900..2700 -->
+	Azimuth   int `xml:"AbsoluteHigh>azimuth"`      //<!--opt, xs:integer, 0..3600 -->
+	Zoom      int `xml:"AbsoluteHigh>absoluteZoom"` //<!--opt, xs:integer, 0.. 1000--->
+}
+
+func (data PTZabsoluteData) XML() string {
+	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<PTZData version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
+  <AbsoluteHigh>
+    <elevation>%d</elevation>
+    <azimuth>%d</azimuth>
+    <absoluteZoom>%d</absoluteZoom>
+  </AbsoluteHigh>
+</PTZData>`, data.Elevation, data.Azimuth, data.Zoom)
+}
+
+func (c *Client) PTZabsolute(channel string, data PTZabsoluteData) error {
+	log.Debug(data.XML())
+	r := dac.NewRequest(c.user, c.pass, "PUT", c.URL("/ISAPI/PTZCtrl/channels/"+channel+"/absolute"), data.XML())
+
+	resp, err := r.Execute()
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	dump, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		return err
+	}
+
+	log.Debug(string(dump))
+
+	if resp.StatusCode != 200 {
+		return errors.New(resp.Status)
+	}
+
+	return nil
+}
+
+func (c *Client) PTZstatus(channel string) (data PTZabsoluteData, err error) {
+	r := dac.NewRequest(c.user, c.pass, "GET", c.URL("/ISAPI/PTZCtrl/channels/"+channel+"/status"), "")
+
+	resp, err := r.Execute()
+	if err != nil {
+		return data, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return data, errors.New(resp.Status)
+	}
+
+	err = xml.NewDecoder(resp.Body).Decode(&data)
 
 	return
 }
